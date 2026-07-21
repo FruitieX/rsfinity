@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gridfinity Mount Swapper
 
-## Getting Started
+A fully offline web application for swapping the base mount on gridfinity-compatible 3D models. Upload STL or 3MF files, adjust the cut plane, select a replacement mount system, and download the remounted model.
 
-First, run the development server:
+## Features
+
+- **100% Client-Side**: All processing happens in your browser using WebAssembly. Your files never leave your device.
+- **Multiple Mount Systems**: Support for Gridfinity Original, Gridfinity Refined, Gridfinity Lite, and Clickfinity bases.
+- **Auto-Detection**: Automatically detects grid dimensions (e.g., 2x3 bins) and suggests optimal cut height.
+- **Mount Tiling**: Automatically tiles the replacement mount to match the detected bin size.
+- **3D Preview**: Real-time visualization with adjustable cut plane using Three.js.
+- **Static Deployment**: Can be hosted on any static file server (GitHub Pages, Netlify, Vercel, etc.).
+
+## Tech Stack
+
+- **Frontend**: Next.js 16, React, TypeScript, Tailwind CSS, shadcn/ui
+- **3D Rendering**: React Three Fiber, Three.js
+- **Geometry Processing**: Rust compiled to WebAssembly
+  - STL parsing (binary and ASCII)
+  - 3MF parsing (ZIP + XML)
+  - Mesh cutting at horizontal plane
+  - Mesh merging and tiling
+
+## Development
+
+### Prerequisites
+
+- Node.js 20+
+- Rust toolchain with `wasm-pack`
+- `wasm32-unknown-unknown` target: `rustup target add wasm32-unknown-unknown`
+
+### Setup
 
 ```bash
+# Install dependencies
+npm install
+
+# Build WASM module
+npm run build:wasm
+
+# Generate mount presets
+npm run build:mounts
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Build for Production
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Output will be in the `out/` directory, ready for static hosting.
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+/rsfinity
+├── /src
+│   ├── /app                 # Next.js app router pages
+│   ├── /components
+│   │   ├── /ui             # shadcn/ui components
+│   │   ├── /viewer         # 3D mesh viewer
+│   │   ├── /upload         # File upload components
+│   │   └── /workflow       # Mount selector, cut plane controls
+│   └── /lib
+│       ├── wasm-api.ts     # TypeScript wrapper for WASM
+│       ├── mount-presets.ts # Mount preset definitions
+│       └── /wasm           # Compiled WASM module (generated)
+├── /wasm-lib               # Rust WASM crate
+│   └── /src
+│       ├── lib.rs          # WASM entry points
+│       ├── mesh.rs         # Mesh data structures
+│       ├── operations.rs   # Cut, merge, tile algorithms
+│       └── /parsers        # STL and 3MF parsers
+├── /public
+│   └── /mounts             # Mount preset STL files (generated)
+└── /scripts
+    └── generate-mounts.ts  # Script to generate placeholder mount STLs
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## How It Works
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Upload**: User uploads a gridfinity-compatible STL or 3MF file
+2. **Parse**: WASM parses the mesh and extracts vertices/triangles
+3. **Analyze**: Detects grid dimensions from bounding box (42mm grid units) and suggests cut height
+4. **Configure**: User adjusts cut plane and selects replacement mount
+5. **Process**: 
+   - Cuts mesh at horizontal plane, keeping upper portion (the bin)
+   - Tiles the selected mount to match detected grid dimensions
+   - Merges bin and tiled mount into single mesh
+6. **Export**: Downloads the result as binary STL
 
-## Deploy on Vercel
+## Mount Presets
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Mount | Cut Height | Description |
+|-------|-----------|-------------|
+| Gridfinity Original | 5.0mm | Standard base with magnet holes |
+| Gridfinity Refined | 4.75mm | Improved tolerances by Zack Freedman |
+| Gridfinity Lite | 2.8mm | Minimal base, faster to print |
+| Clickfinity | 5.2mm | Click-lock mechanism for tool-free removal |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT
