@@ -52,3 +52,9 @@ directory when `RSFINITY_MODELS` is set. Real bins can be generated with
 openscad --backend=manifold -o bin-3x2.stl -D gridx=3 -D gridy=2 gridfinity-rebuilt-bins.scad
 RSFINITY_MODELS=/path/to/models npm test
 ```
+
+## Deployment
+
+Served at https://rsfinity.fruitiex.org from `~/homelab/apps/rsfinity`. Every
+push to `main` that passes CI publishes `ghcr.io/fruitiex/rsfinity` and
+dispatches `image-update` to `FruitieX/homelab`, which pins the new digest.
