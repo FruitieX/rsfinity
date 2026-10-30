@@ -59,8 +59,8 @@ jobs:
       - name: Smoke test image
         run: |
           docker run -d --rm -p 8080:8080 --name rsfinity rsfinity:ci
-          for _ in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/ -o index.html && break; sleep 1; done
-          grep -q '<title>rsfinity' index.html
+          for _ in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/ -o "$RUNNER_TEMP/index.html" && break; sleep 1; done
+          grep -q '<title>rsfinity' "$RUNNER_TEMP/index.html"
           wasm="$(docker exec rsfinity sh -c 'ls /usr/share/nginx/html/assets/*.wasm' | head -1)"
           curl -fsS -o /dev/null -w '%{content_type}\n' "http://127.0.0.1:8080/assets/$(basename "$wasm")" | grep -q application/wasm
           docker stop rsfinity
