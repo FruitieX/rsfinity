@@ -1,61 +1,76 @@
+<img src="public/favicon.svg" width="96" alt="">
+
 # rsfinity
 
-Swap the base of any Gridfinity bin. Drop in a bin (STL or 3MF), then pick a
-built-in base (plain, magnet holes, magnets + screws) or take the base from
-another bin, and download one clean, watertight model. Everything runs in the
-browser; files never leave the device.
+rsfinity swaps the base of a Gridfinity bin. It's for when you've found a bin
+you like but want different feet, say magnet holes, or want every bin in a
+drawer to share the same base. Load the bin, pick a new base and download one
+printable model. It runs entirely in the browser; your files never leave your
+machine.
 
-## How it works
+A hosted copy lives at https://rsfinity.fruitiex.org.
 
-All geometry runs in a web worker using [manifold-3d](https://github.com/elalish/manifold)
-(robust mesh booleans compiled to WASM).
+![The sample 2×1 bin with a magnet-hole base, seen from below](docs/screenshots/magnet-base.png)
 
-1. **Parse.** STL (binary/ASCII) and 3MF (including Bambu/Orca/Prusa projects
-   whose objects are components in `3D/Objects/*.model`) are welded into
-   manifold solids (`src/geometry/parse.ts`).
-2. **Analyse** (`analyzeBin` in `src/geometry/gridfinity.ts`):
-   - The grid size comes from the footprint of the lowest 4 mm, in 0.5-unit steps.
-   - Half-grid (21 mm) feet are recognised by counting feet near the bottom.
-   - The base height is the lowest Z where the cross-section reaches the full
-     body width (feet are chamfered narrower below it). It is snapped to the
-     vertex layer where that happens, normally 4.75 mm.
-3. **Swap** (`swapBase` in `src/geometry/swap.ts`):
-   - The bin is trimmed above its cut plane.
-   - The donor is trimmed below its own cut plane and split into grid cells.
-   - Each bin cell gets the matching donor cell, aligned so the two cut planes
-     meet. Corner and edge cells map to corner and edge cells, so edge-only
-     features such as corner magnets survive.
-   - Everything is unioned into one solid. Zero-volume slivers from the
-     coplanar seam and tiny loose fragments are dropped.
+## What it does
 
-A donor can be any size (a 1×1 bin is enough). A bin with half-unit
-dimensions needs half-grid feet: a half-grid donor, or a built-in base, which
-is then generated at 21 mm.
+Drop in a bin as STL or 3MF (Bambu, Orca and Prusa project files work too).
+rsfinity works out its grid size and where the feet meet the body, and you can
+nudge that cut height if it guesses wrong. Then choose a new base:
 
-## Development
+- one of the built-in bases: plain, 6×2 mm magnet holes, or magnets plus 3 mm
+  screw holes;
+- or the base of another bin. A 1×1 donor is enough, since its feet get tiled
+  under the whole bin, and corner features such as corner magnets end up on
+  the corners.
+
+The result is one watertight solid, downloadable as 3MF or STL. Half-unit bins
+are handled with half-grid (21 mm) feet.
+
+The geometry is done with [manifold-3d](https://github.com/elalish/manifold) in
+a web worker, and the viewer uses three.js. [docs/how-it-works.md](docs/how-it-works.md)
+describes the analysis and swap steps.
+
+## Running it locally
+
+The repo has a Nix dev shell with Node and OpenSCAD:
 
 ```bash
-nix develop        # node 26 (+ openscad for test models)
+nix develop
 npm install
 npm run dev        # http://localhost:5173
-npm test           # geometry tests against generated bins
-npm run test:e2e   # browser smoke test against dist/ (after npm run build)
-npm run build      # static site in dist/ (relative paths, host anywhere)
+npm run build      # static site in dist/
 ```
 
-### Testing against real models
+The build uses relative paths, so `dist/` can be served from any static host
+or subdirectory.
 
-`src/geometry/__tests__/real-models.test.ts` swaps every pair of models in a
-directory when `RSFINITY_MODELS` is set. Real bins can be generated with
-[gridfinity-rebuilt-openscad](https://github.com/kennetek/gridfinity-rebuilt-openscad), for example:
+## Deploying
+
+Every push to `main` that passes CI publishes a container image,
+`ghcr.io/fruitiex/rsfinity`, which serves the static site with nginx on port
+8080. Run it behind whatever reverse proxy you already have:
+
+```bash
+docker run -p 8080:8080 ghcr.io/fruitiex/rsfinity:main
+```
+
+## Tests
+
+```bash
+npm test           # geometry tests against generated bins
+npm run build && npm run test:e2e   # Playwright smoke test against dist/
+```
+
+On NixOS, point the smoke test at nixpkgs' Chromium with
+`SMOKE_CHROMIUM_PATH=$(command -v chromium)`.
+
+To test against real models, set `RSFINITY_MODELS` to a directory of bins and
+`src/geometry/__tests__/real-models.test.ts` will swap every pair. You can
+generate bins with
+[gridfinity-rebuilt-openscad](https://github.com/kennetek/gridfinity-rebuilt-openscad):
 
 ```bash
 openscad --backend=manifold -o bin-3x2.stl -D gridx=3 -D gridy=2 gridfinity-rebuilt-bins.scad
 RSFINITY_MODELS=/path/to/models npm test
 ```
-
-## Deployment
-
-Served at https://rsfinity.fruitiex.org from `apps/rsfinity` in the homelab repo. Every
-push to `main` that passes CI publishes `ghcr.io/fruitiex/rsfinity` and
-dispatches `image-update` to `FruitieX/homelab`, which pins the new digest.
