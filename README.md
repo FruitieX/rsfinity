@@ -74,3 +74,7 @@ generate bins with
 openscad --backend=manifold -o bin-3x2.stl -D gridx=3 -D gridy=2 gridfinity-rebuilt-bins.scad
 RSFINITY_MODELS=/path/to/models npm test
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE).
