@@ -7,5 +7,5 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   worker: { format: "es" },
   build: { chunkSizeWarningLimit: 1600 },
-  test: { environment: "node", testTimeout: 60_000 },
+  test: { environment: "node", testTimeout: 60_000, include: ["src/**/*.test.ts"] },
 });

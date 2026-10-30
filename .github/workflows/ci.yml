@@ -27,27 +27,52 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Browser smoke test
+        run: npm run test:e2e
 
   build:
     name: Build image
+    # PRs (incl. Renovate base-image bumps) check that the image builds and serves the app;
+    # main also publishes it.
     needs: checks
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.event_name == 'pull_request' || (github.ref == 'refs/heads/main' && github.event_name == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
       packages: write
     outputs:
-      digest: ${{ steps.build.outputs.digest }}
+      digest: ${{ steps.publish.outputs.digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: rsfinity:ci
+          cache-from: type=gha
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max' || '' }}
+      - name: Smoke test image
+        run: |
+          docker run -d --rm -p 8080:8080 --name rsfinity rsfinity:ci
+          for _ in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/ -o index.html && break; sleep 1; done
+          grep -q '<title>rsfinity' index.html
+          wasm="$(docker exec rsfinity sh -c 'ls /usr/share/nginx/html/assets/*.wasm' | head -1)"
+          curl -fsS -o /dev/null -w '%{content_type}\n' "http://127.0.0.1:8080/assets/$(basename "$wasm")" | grep -q application/wasm
+          docker stop rsfinity
       - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        if: github.event_name == 'push'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - id: build
+      - name: Publish image
+        id: publish
+        if: github.event_name == 'push'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -56,11 +81,11 @@ jobs:
             ghcr.io/fruitiex/rsfinity:main
             ghcr.io/fruitiex/rsfinity:${{ github.sha }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   deploy:
     name: Deploy to homelab
     needs: build
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
