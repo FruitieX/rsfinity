@@ -56,6 +56,6 @@ RSFINITY_MODELS=/path/to/models npm test
 
 ## Deployment
 
-Served at https://rsfinity.fruitiex.org from `~/homelab/apps/rsfinity`. Every
+Served at https://rsfinity.fruitiex.org from `apps/rsfinity` in the homelab repo. Every
 push to `main` that passes CI publishes `ghcr.io/fruitiex/rsfinity` and
 dispatches `image-update` to `FruitieX/homelab`, which pins the new digest.
