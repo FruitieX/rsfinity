@@ -11,7 +11,7 @@
       devShells = forAll (pkgs: {
         default = pkgs.mkShell {
           # openscad-unstable is only needed to generate real test models (see README).
-          packages = [ pkgs.nodejs_24 pkgs.openscad-unstable ];
+          packages = [ pkgs.nodejs_26 pkgs.openscad-unstable ];
         };
       });
     };

@@ -35,7 +35,7 @@ is then generated at 21 mm.
 ## Development
 
 ```bash
-nix develop        # node 24 (+ openscad for test models)
+nix develop        # node 26 (+ openscad for test models)
 npm install
 npm run dev        # http://localhost:5173
 npm test           # geometry tests against generated bins
