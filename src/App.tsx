@@ -694,10 +694,9 @@ function EmptyState({ onSample, busy }: { onSample: () => void; busy: boolean })
 function Logo() {
   return (
     <svg viewBox="0 0 32 32" className="size-8 shrink-0" aria-hidden>
-      <rect x="3" y="3" width="12" height="12" rx="3" fill="var(--accent)" />
-      <rect x="17" y="3" width="12" height="12" rx="3" fill="var(--body)" />
-      <rect x="3" y="17" width="12" height="12" rx="3" fill="var(--body)" />
-      <rect x="17" y="17" width="12" height="12" rx="3" fill="var(--body)" />
+      <path d="M4 5h4v11h16V5h4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="var(--body)" />
+      <path d="M4.5 23.5h10.5l-2 4.5H6.5z" fill="var(--accent)" />
+      <path d="M17 23.5h10.5l-2 4.5h-6.5z" fill="var(--accent)" />
     </svg>
   );
 }
